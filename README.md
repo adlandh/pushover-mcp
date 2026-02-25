@@ -1,7 +1,7 @@
 # Pushover MCP
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/adlandh/context-logger.svg)](https://pkg.go.dev/github.com/adlandh/context-logger)
-[![Go Report Card](https://goreportcard.com/badge/github.com/adlandh/context-logger)](https://goreportcard.com/report/github.com/adlandh/context-logger)
+[![Go Reference](https://pkg.go.dev/badge/github.com/adlandh/pushover-mcp.svg)](https://pkg.go.dev/github.com/adlandh/pushover-mcp)
+[![Go Report Card](https://goreportcard.com/badge/github.com/adlandh/pushover-mcp)](https://goreportcard.com/report/github.com/adlandh/pushover-mcp)
 
 MCP service with one tool: `send`.
 
