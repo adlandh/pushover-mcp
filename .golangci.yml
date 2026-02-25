@@ -1,0 +1,63 @@
+version: "2"
+run:
+  go: "1.26"
+  tests: false
+linters:
+  default: none
+  enable:
+    - asciicheck
+    - bodyclose
+    - copyloopvar
+    - cyclop
+    - dupl
+    - dupword
+    - errcheck
+    - errorlint
+    - forcetypeassert
+    - funlen
+    - gocritic
+    - gosec
+    - gosmopolitan
+    - govet
+    - ineffassign
+    - loggercheck
+    - makezero
+    - mirror
+    - noctx
+    - prealloc
+    - predeclared
+    - staticcheck
+    - thelper
+    - unused
+    - wastedassign
+    - wrapcheck
+    - wsl_v5
+  settings:
+    gosec:
+      excludes:
+        - G117
+    govet:
+      enable-all: true
+    wrapcheck:
+      ignore-sig-regexps:
+        - \(github\.com\/labstack\/echo\/v4\.Context\).*
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

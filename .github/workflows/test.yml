@@ -1,0 +1,23 @@
+name: "Test app"
+
+on:
+  pull_request:
+    branches: [ master, main ]
+  push:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 1.26
+
+      - name: Pulling code
+        uses: actions/checkout@v6
+
+      - name: Run tests
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...

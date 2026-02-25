@@ -1,0 +1,11 @@
+pre-push:
+  parallel: true
+  commands:
+    lint:
+      tags: run linter
+      run: golangci-lint run
+      glob: "*.go"
+    test:
+      tags: run tests
+      run: go test -v ./...
+      glob: "*.go"
