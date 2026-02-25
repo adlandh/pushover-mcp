@@ -68,6 +68,28 @@ Edit `claude_desktop_config.json`:
 }
 ```
 
+### OpenCode
+
+Add this server under `mcp` in your OpenCode config (`opencode.json` or `opencode.jsonc`):
+
+```json
+{
+  "mcp": {
+    "pushover": {
+      "type": "local",
+      "command": ["/absolute/path/to/pushover-mcp"],
+      "environment": {
+        "PUSHOVER_API_TOKEN": "YOUR_TOKEN",
+        "PUSHOVER_USER_KEY": "YOUR_USER_KEY"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+If your OpenCode setup uses per-project config, put this block into the project-level MCP config instead of global config.
+
 ## Request structure
 
 Tool name: `send`
@@ -108,26 +130,6 @@ Typical paths:
 
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Windows: `%APPDATA%/Claude/claude_desktop_config.json`
-
-### OpenCode
-
-Add the same MCP server block to your OpenCode config:
-
-```json
-{
-  "mcpServers": {
-    "pushover": {
-      "command": "/absolute/path/to/pushover-mcp",
-      "env": {
-        "PUSHOVER_API_TOKEN": "YOUR_TOKEN",
-        "PUSHOVER_USER_KEY": "YOUR_USER_KEY"
-      }
-    }
-  }
-}
-```
-
-If your OpenCode setup uses per-project config, put this block into the project-level MCP config instead of global config.
 
 ## Quick local check (bash)
 
