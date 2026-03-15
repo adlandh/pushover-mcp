@@ -12,6 +12,12 @@ import (
 	"github.com/adlandh/pushover-mcp/internal/domain"
 )
 
+const (
+	errNewClient = "NewClient() error = %v"
+	errSend      = "Send() error = %v"
+	testURL      = "https://example.com"
+)
+
 func TestNewClient_Validation(t *testing.T) {
 	_, err := NewPushoverClient(Config{}, &http.Client{})
 	if err == nil || !strings.Contains(err.Error(), "missing APIToken") {
@@ -29,23 +35,30 @@ func TestNewClient_Validation(t *testing.T) {
 	}
 }
 
-func TestSend_SuccessAndFormPayload(t *testing.T) {
-	var received url.Values
+func TestNewClient_DefaultAPIURL(t *testing.T) {
+	client, err := NewPushoverClient(Config{
+		APIToken: "token-1",
+		UserKey:  "user-1",
+		APIURL:   "",
+	}, &http.Client{})
+	if err != nil {
+		t.Fatalf(errNewClient, err)
+	}
+	if client == nil {
+		t.Fatal("client is nil")
+	}
+}
 
+func setupTestServer(t *testing.T, received *url.Values) *httptest.Server {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Fatalf("method = %s, want POST", r.Method)
-		}
-		if got := r.Header.Get("Content-Type"); got != "application/x-www-form-urlencoded" {
-			t.Fatalf("content-type = %q, want %q", got, "application/x-www-form-urlencoded")
-		}
+		assertRequestMethodAndContentType(t, r)
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			t.Fatalf("read body error: %v", err)
 		}
 
-		received, err = url.ParseQuery(string(body))
+		*received, err = url.ParseQuery(string(body))
 		if err != nil {
 			t.Fatalf("parse query error: %v", err)
 		}
@@ -53,6 +66,31 @@ func TestSend_SuccessAndFormPayload(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":1}`))
 	}))
+
+	return ts
+}
+
+func assertRequestMethodAndContentType(t *testing.T, r *http.Request) {
+	if r.Method != http.MethodPost {
+		t.Fatalf("method = %s, want POST", r.Method)
+	}
+	if got := r.Header.Get("Content-Type"); got != "application/x-www-form-urlencoded" {
+		t.Fatalf("content-type = %q, want %q", got, "application/x-www-form-urlencoded")
+	}
+}
+
+func assertFormValues(t *testing.T, received url.Values, expected map[string]string) {
+	for key, want := range expected {
+		if got := received.Get(key); got != want {
+			t.Fatalf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+func TestSend_SuccessAndFormPayload(t *testing.T) {
+	var received url.Values
+
+	ts := setupTestServer(t, &received)
 	defer ts.Close()
 
 	client, err := NewPushoverClient(Config{
@@ -61,42 +99,144 @@ func TestSend_SuccessAndFormPayload(t *testing.T) {
 		APIURL:   ts.URL,
 	}, ts.Client())
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf(errNewClient, err)
 	}
 
 	priority := 2
 	title := "Build"
+	sound := "pushover"
+	testURLValue := testURL
+	urlTitle := "Link"
+	device := "iphone"
+
 	n := domain.Notification{
 		Message:  "deployed",
 		Title:    &title,
 		Priority: &priority,
+		Sound:    &sound,
+		URL:      &testURLValue,
+		URLTitle: &urlTitle,
+		Device:   &device,
 	}
 
-	err = client.Send(context.Background(), n)
+	if err := client.Send(context.Background(), n); err != nil {
+		t.Fatalf(errSend, err)
+	}
+
+	assertFormValues(t, received, map[string]string{
+		"token":     "token-1",
+		"user":      "user-1",
+		"message":   "deployed",
+		"title":     "Build",
+		"priority":  "2",
+		"retry":     "60",
+		"expire":    "3600",
+		"sound":     "pushover",
+		"url":       testURL,
+		"url_title": "Link",
+		"device":    "iphone",
+	})
+}
+
+func TestSend_PriorityNotEmergency_NoRetryExpire(t *testing.T) {
+	var received url.Values
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		received, _ = url.ParseQuery(string(body))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":1}`))
+	}))
+	defer ts.Close()
+
+	client, _ := NewPushoverClient(Config{
+		APIToken: "token-1",
+		UserKey:  "user-1",
+		APIURL:   ts.URL,
+	}, ts.Client())
+
+	priority := 1
+	n := domain.Notification{
+		Message:  "test",
+		Priority: &priority,
+	}
+
+	_ = client.Send(context.Background(), n)
+
+	if received.Get("retry") != "" {
+		t.Fatalf("retry = %q, want empty", received.Get("retry"))
+	}
+	if received.Get("expire") != "" {
+		t.Fatalf("expire = %q, want empty", received.Get("expire"))
+	}
+}
+
+func TestSend_NoPriority(t *testing.T) {
+	var received url.Values
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		received, _ = url.ParseQuery(string(body))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":1}`))
+	}))
+	defer ts.Close()
+
+	client, _ := NewPushoverClient(Config{
+		APIToken: "token-1",
+		UserKey:  "user-1",
+		APIURL:   ts.URL,
+	}, ts.Client())
+
+	n := domain.Notification{
+		Message: "test without priority",
+	}
+
+	err := client.Send(context.Background(), n)
 	if err != nil {
-		t.Fatalf("Send() error = %v", err)
+		t.Fatalf(errSend, err)
 	}
 
-	if received.Get("token") != "token-1" {
-		t.Fatalf("token = %q, want %q", received.Get("token"), "token-1")
+	if received.Get("priority") != "" {
+		t.Fatalf("priority = %q, want empty", received.Get("priority"))
 	}
-	if received.Get("user") != "user-1" {
-		t.Fatalf("user = %q, want %q", received.Get("user"), "user-1")
+}
+
+func TestSend_EmptyOptionalFields(t *testing.T) {
+	var received url.Values
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		received, _ = url.ParseQuery(string(body))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":1}`))
+	}))
+	defer ts.Close()
+
+	client, _ := NewPushoverClient(Config{
+		APIToken: "token-1",
+		UserKey:  "user-1",
+		APIURL:   ts.URL,
+	}, ts.Client())
+
+	emptyTitle := ""
+	emptySound := "   "
+	n := domain.Notification{
+		Message: "test",
+		Title:   &emptyTitle,
+		Sound:   &emptySound,
 	}
-	if received.Get("message") != "deployed" {
-		t.Fatalf("message = %q, want %q", received.Get("message"), "deployed")
+
+	err := client.Send(context.Background(), n)
+	if err != nil {
+		t.Fatalf(errSend, err)
 	}
-	if received.Get("title") != "Build" {
-		t.Fatalf("title = %q, want %q", received.Get("title"), "Build")
+
+	if received.Get("title") != "" {
+		t.Fatalf("title = %q, want empty", received.Get("title"))
 	}
-	if received.Get("priority") != "2" {
-		t.Fatalf("priority = %q, want %q", received.Get("priority"), "2")
-	}
-	if received.Get("retry") != "60" {
-		t.Fatalf("retry = %q, want %q", received.Get("retry"), "60")
-	}
-	if received.Get("expire") != "3600" {
-		t.Fatalf("expire = %q, want %q", received.Get("expire"), "3600")
+	if received.Get("sound") != "" {
+		t.Fatalf("sound = %q, want empty", received.Get("sound"))
 	}
 }
 
@@ -113,7 +253,7 @@ func TestSend_Non2xx(t *testing.T) {
 		APIURL:   ts.URL,
 	}, ts.Client())
 	if err != nil {
-		t.Fatalf("NewClient() error = %v", err)
+		t.Fatalf(errNewClient, err)
 	}
 
 	err = client.Send(context.Background(), domain.Notification{Message: "hello"})
