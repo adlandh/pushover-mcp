@@ -34,6 +34,7 @@ func TestFromEnv_Success(t *testing.T) {
 func TestFromEnv_DefaultTimeout(t *testing.T) {
 	t.Setenv("PUSHOVER_API_TOKEN", "token-123")
 	t.Setenv("PUSHOVER_USER_KEY", "user-456")
+	t.Setenv("PUSHOVER_TIMEOUT", "")
 
 	cfg, err := FromEnv()
 	if err != nil {
