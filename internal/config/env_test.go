@@ -3,12 +3,14 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFromEnv_Success(t *testing.T) {
 	t.Setenv("PUSHOVER_API_TOKEN", "token-123")
 	t.Setenv("PUSHOVER_USER_KEY", "user-456")
 	t.Setenv("PUSHOVER_API_URL", "https://example.com/messages")
+	t.Setenv("PUSHOVER_TIMEOUT", "30s")
 
 	cfg, err := FromEnv()
 	if err != nil {
@@ -23,6 +25,23 @@ func TestFromEnv_Success(t *testing.T) {
 	}
 	if cfg.Pushover.APIURL != "https://example.com/messages" {
 		t.Fatalf("APIURL = %q, want %q", cfg.Pushover.APIURL, "https://example.com/messages")
+	}
+	if cfg.Timeout != 30*time.Second {
+		t.Fatalf("Timeout = %v, want %v", cfg.Timeout, 30*time.Second)
+	}
+}
+
+func TestFromEnv_DefaultTimeout(t *testing.T) {
+	t.Setenv("PUSHOVER_API_TOKEN", "token-123")
+	t.Setenv("PUSHOVER_USER_KEY", "user-456")
+
+	cfg, err := FromEnv()
+	if err != nil {
+		t.Fatalf("FromEnv() error = %v", err)
+	}
+
+	if cfg.Timeout != 15*time.Second {
+		t.Fatalf("Timeout = %v, want %v", cfg.Timeout, 15*time.Second)
 	}
 }
 

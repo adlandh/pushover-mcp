@@ -26,8 +26,10 @@ func TestSendNotificationUseCase_Execute_Success(t *testing.T) {
 	useCase := NewSendNotificationUseCase(sender)
 
 	priority := 1
+	title := "Test"
 	notification := domain.Notification{
 		Message:  "hello",
+		Title:    &title,
 		Priority: &priority,
 	}
 
@@ -42,8 +44,51 @@ func TestSendNotificationUseCase_Execute_Success(t *testing.T) {
 	if sender.notification.Message != "hello" {
 		t.Fatalf("message = %q, want %q", sender.notification.Message, "hello")
 	}
+	if sender.notification.Title == nil || *sender.notification.Title != "Test" {
+		t.Fatalf("title = %v, want Test", sender.notification.Title)
+	}
 	if sender.notification.Priority == nil || *sender.notification.Priority != 1 {
 		t.Fatalf("priority = %v, want 1", sender.notification.Priority)
+	}
+}
+
+func TestSendNotificationUseCase_Execute_AllOptionalFields(t *testing.T) {
+	sender := &fakeSender{}
+	useCase := NewSendNotificationUseCase(sender)
+
+	priority := 0
+	title := "Title"
+	sound := "pushover"
+	url := "https://example.com"
+	urlTitle := "Link"
+	device := "iphone"
+
+	notification := domain.Notification{
+		Message:  "hello",
+		Title:    &title,
+		Priority: &priority,
+		Sound:    &sound,
+		URL:      &url,
+		URLTitle: &urlTitle,
+		Device:   &device,
+	}
+
+	err := useCase.Execute(context.Background(), notification)
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+
+	if !sender.called {
+		t.Fatal("sender.Send was not called")
+	}
+	if sender.notification.Sound == nil || *sender.notification.Sound != "pushover" {
+		t.Fatalf("sound = %v, want pushover", sender.notification.Sound)
+	}
+	if sender.notification.URL == nil || *sender.notification.URL != "https://example.com" {
+		t.Fatalf("url = %v, want https://example.com", sender.notification.URL)
+	}
+	if sender.notification.Device == nil || *sender.notification.Device != "iphone" {
+		t.Fatalf("device = %v, want iphone", sender.notification.Device)
 	}
 }
 
