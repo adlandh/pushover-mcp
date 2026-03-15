@@ -1,2 +1,2 @@
 .golangci.yml
-coverage.txt
+coverage.*
