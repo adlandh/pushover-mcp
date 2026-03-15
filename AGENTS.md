@@ -4,19 +4,19 @@
 
 These instructions apply to the entire `pushover-mcp` repository.
 
-The project is a small Go service that exposes Pushover notification sending through an MCP server. Keep changes minimal, explicit, and aligned with the current hexagonal structure.
+`pushover-mcp` is a small Go service that exposes one MCP tool for sending Pushover notifications. Keep changes minimal and aligned with the current hexagonal structure.
 
 ## Repository Snapshot
 
 - Module: `github.com/adlandh/pushover-mcp`
 - Go version: `1.26`
 - Entry point: `main.go`
-- Core dependency: `github.com/mark3labs/mcp-go`
-- Configuration library: `github.com/caarlos0/env/v11`
+- MCP library: `github.com/mark3labs/mcp-go`
+- Config library: `github.com/caarlos0/env/v11`
 
 ## Architecture
 
-Preserve the existing dependency direction:
+Preserve dependency direction:
 
 - `internal/domain`: core models and interfaces
 - `internal/application`: use cases and orchestration
@@ -24,29 +24,32 @@ Preserve the existing dependency direction:
 - `internal/config`: environment parsing and config loading
 - `internal/ports`: MCP server wiring and transport-facing handlers
 
-Rule:
-- Dependencies should point inward. `domain` must not depend on application, adapters, config, or ports.
-- Keep MCP-specific concerns in `ports`.
+Rules:
+
+- Dependencies point inward.
+- `domain` must not depend on `application`, `adapters`, `config`, or `ports`.
 - Keep HTTP and Pushover API details in `adapters`.
-- Put business flow in `application`, not in handlers or clients.
+- Keep MCP-specific concerns in `ports`.
+- Keep validation and orchestration in `application`.
+- Keep `main.go` thin.
 
 ## Working Style
 
 - Prefer small, targeted edits over broad refactors.
-- Match the surrounding code before introducing new patterns.
-- Do not move code across layers without a clear architectural reason.
+- Match existing patterns before introducing new ones.
+- Do not move code across layers without a clear reason.
 - When behavior changes, update or add tests in the same pass.
-- Avoid speculative abstractions unless duplication is already real.
+- Avoid speculative abstractions.
 
 ## Build, Test, and Verification
 
-Run the narrowest command that proves the change first, then broader validation if needed.
+Use the narrowest command that proves the change first.
 
 ```bash
 # Run all tests
 go test ./...
 
-# Run a single package test
+# Run a single test
 go test ./internal/adapters/... -run TestNewClient_Validation -v
 
 # Run tests with coverage
@@ -54,7 +57,7 @@ go test ./... -coverprofile=coverage.out
 go tool cover -func=coverage.out
 
 # Format Go code
-gofmt -w .
+goimports -w .
 
 # Build binary
 go build -o pushover-mcp .
@@ -62,46 +65,29 @@ go build -o pushover-mcp .
 # Install locally
 go install .
 
-# Run linter when available
+# Run linter
 golangci-lint run ./...
 ```
 
 Expectations:
 
-- At minimum, run tests for the package you changed.
+- Run tests for the package you changed at minimum.
 - Run `go test ./...` when changes cross package boundaries or affect wiring.
-- Run `gofmt -w` on every modified Go file.
-- Run `golangci-lint run ./...` before finishing if the environment has it installed.
+- Run `goimports -w` on every modified Go file.
+- Run `golangci-lint run ./...` before finishing if available.
 
 ## Code Style
 
 ### Imports
 
 Use import groups separated by blank lines:
-
 1. Standard library
 2. Third-party packages
 3. Internal project imports
 
-Example:
-
-```go
-import (
-	"context"
-	"fmt"
-	"net/http"
-
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
-
-	"github.com/adlandh/pushover-mcp/internal/application"
-	"github.com/adlandh/pushover-mcp/internal/domain"
-)
-```
-
 ### Formatting
 
-- Use `gofmt` for formatting.
+- Use `goimports` for formatting and import normalization.
 - Use tabs for indentation.
 - Keep lines under 120 characters when practical.
 - Prefer short functions with early returns.
@@ -111,8 +97,8 @@ import (
 - Packages: lowercase, concise, single-purpose
 - Exported identifiers: PascalCase
 - Unexported identifiers: camelCase
-- Constants: descriptive names, grouped in `const` blocks when related
-- Interfaces: use descriptive nouns, often ending in `-er`
+- Constants: descriptive names in `const` blocks when related
+- Interfaces: descriptive nouns, often ending in `-er`
 - Test functions: `Test<FunctionName>_<Scenario>`
 - Test doubles/helpers: prefix with `fake`
 
@@ -126,79 +112,45 @@ if err != nil {
 }
 ```
 
-Validation errors should be direct and specific.
-
-```go
-if cfg.APIToken == "" {
-	return nil, fmt.Errorf("missing APIToken")
-}
-```
-
 Rules:
 
-- Do not discard underlying errors when they add debugging value.
+- Validation errors should be direct and specific.
 - Use lowercase error messages without trailing punctuation.
-- Add context that identifies the failed operation.
+- Do not discard underlying errors when they add debugging value.
+- Add operation context to wrapped errors.
 
-### Struct Layout
+### Struct Layout and Whitespace
 
-Order fields to reduce padding where it does not harm readability.
-
-```go
-type PushoverClient struct {
-	httpClient *http.Client
-	apiToken   string
-	userKey    string
-	apiURL     string
-}
-```
-
-### Control Flow and Whitespace
-
-The repo uses stricter whitespace and readability conventions:
-
-- Add a blank line before `if`, `for`, `switch`, and `return` when it improves readability.
+- Order struct fields to reduce padding when it does not harm readability.
+- `wsl_v5` is enabled; add blank lines where they improve readability.
 - Add a blank line after a function declaration before the first statement.
-- Keep tightly related statements together; do not add whitespace mechanically.
+- Follow surrounding style and rerun the linter.
 
 ### Complexity
 
 - Target cyclomatic complexity under `10`.
-- Split branches into helpers before nesting becomes hard to scan.
+- Split complex logic into helpers before nesting becomes hard to scan.
 - Prefer explicit logic over clever compression.
 
 ## Testing Guidelines
 
 - Prefer table-driven tests.
 - Use `t.Run` for named scenarios.
-- Mock external HTTP behavior instead of hitting real services.
 - Keep tests deterministic and isolated.
+- Mock external HTTP behavior instead of hitting real services.
 - In config tests, set environment variables explicitly.
 - Add regression tests for bug fixes.
+- Extract repeated test literals into constants when lint or review points them out.
 
-Example shape:
+Useful repo patterns:
 
-```go
-func TestNewClient_Validation(t *testing.T) {
-	tests := []struct {
-		name    string
-		cfg     Config
-		wantErr string
-	}{
-		// ...
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			// ...
-		})
-	}
-}
-```
+- Adapter tests use `httptest.Server`.
+- Application tests use `fake` senders.
+- Port tests can call MCP handlers directly.
 
 ## Linting Expectations
 
-The repo expects compatibility with these linters:
+Write code compatible with these linters:
 
 - `wrapcheck`
 - `wsl_v5`
@@ -206,41 +158,27 @@ The repo expects compatibility with these linters:
 - `gosec`
 - `errcheck`
 - `gosmopolitan`
-
-Write code that satisfies them by default, especially around error wrapping, unchecked errors, whitespace, and function complexity.
+- `govet`
 
 ## File-Level Guidance
 
-### `internal/domain`
+- `internal/domain`: keep it dependency-free.
+- `internal/application`: express use cases in terms of domain interfaces.
+- `internal/adapters`: encapsulate Pushover HTTP behavior.
+- `internal/config`: handle env-driven configuration only.
+- `internal/ports`: translate MCP input/output without embedding business logic.
 
-- Keep it small and dependency-free.
-- Only domain concepts, value objects, and interfaces belong here.
+## Agent Notes
 
-### `internal/application`
-
-- Express use cases in terms of domain interfaces.
-- Avoid direct knowledge of HTTP, env parsing, or MCP transport details.
-
-### `internal/adapters`
-
-- Encapsulate Pushover API request construction, response handling, and HTTP client behavior.
-- Keep serialization and protocol details here.
-
-### `internal/config`
-
-- Handle environment-driven configuration only.
-- Validate required settings close to loading.
-
-### `internal/ports`
-
-- Define MCP tools, handlers, and server assembly.
-- Translate MCP input/output into application calls without embedding business logic.
+- No Cursor rules or Copilot instruction files are present in this repository.
+- Do not introduce new tooling or config formats unless clearly needed.
+- Keep `README.md` examples aligned with actual runtime behavior and config keys.
 
 ## Change Checklist
 
 Before finishing:
 
-- Code is formatted with `gofmt`
+- Code is formatted with `goimports`
 - Imports are grouped correctly
 - Errors are wrapped with useful context
 - New behavior has tests, or existing tests were updated
