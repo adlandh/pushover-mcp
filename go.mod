@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/caarlos0/env/v11 v11.4.0
-	github.com/mark3labs/mcp-go v0.46.0
+	github.com/mark3labs/mcp-go v0.47.1
 )
 
 require (
