@@ -240,6 +240,51 @@ func TestSend_EmptyOptionalFields(t *testing.T) {
 	}
 }
 
+func TestSend_RequestError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":1}`))
+	}))
+	defer ts.Close()
+
+	client, err := NewPushoverClient(Config{
+		APIToken: "token-1",
+		UserKey:  "user-1",
+		APIURL:   ts.URL,
+	}, ts.Client())
+	if err != nil {
+		t.Fatalf(errNewClient, err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err = client.Send(ctx, domain.Notification{Message: "test"})
+	if err == nil {
+		t.Fatal("Send() error = nil, want non-nil")
+	}
+}
+
+func TestSend_InvalidURL(t *testing.T) {
+	client, err := NewPushoverClient(Config{
+		APIToken: "token-1",
+		UserKey:  "user-1",
+		APIURL:   "http://\x00invalid",
+	}, &http.Client{})
+	if err != nil {
+		t.Fatalf(errNewClient, err)
+	}
+
+	err = client.Send(context.Background(), domain.Notification{Message: "test"})
+	if err == nil {
+		t.Fatal("Send() error = nil, want non-nil")
+	}
+
+	if !strings.Contains(err.Error(), "create request") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestSend_Non2xx(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
