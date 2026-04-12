@@ -1,15 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/adlandh/pushover-mcp/internal/adapters"
-	"github.com/adlandh/pushover-mcp/internal/ports"
-	"github.com/mark3labs/mcp-go/server"
-
 	"github.com/adlandh/pushover-mcp/internal/application"
 	"github.com/adlandh/pushover-mcp/internal/config"
+	"github.com/adlandh/pushover-mcp/internal/ports"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 const (
@@ -17,23 +17,31 @@ const (
 	serverVersion = "1.0.0"
 )
 
-func main() {
+func run() error {
 	env, err := config.FromEnv()
 	if err != nil {
-		log.Fatalf("configuration error: %v\n", err)
+		return fmt.Errorf("configuration error: %w", err)
 	}
 
 	httpClient := &http.Client{Timeout: env.Timeout}
 
 	sender, err := adapters.NewPushoverClient(env.Pushover, httpClient)
 	if err != nil {
-		log.Fatalf("error creating sender: %v\n", err)
+		return fmt.Errorf("error creating sender: %w", err)
 	}
 
 	useCase := application.NewSendNotificationUseCase(sender)
 	mcpServer := ports.NewServer(serverName, serverVersion, useCase)
 
 	if err := server.ServeStdio(mcpServer); err != nil {
-		log.Fatalf("error starting server: %v\n", err)
+		return fmt.Errorf("error starting server: %w", err)
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("%v\n", err)
 	}
 }
