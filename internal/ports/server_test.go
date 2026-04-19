@@ -7,9 +7,17 @@ import (
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/adlandh/pushover-mcp/internal/application"
 	"github.com/adlandh/pushover-mcp/internal/domain"
+)
+
+const (
+	testServerName    = "test-server"
+	testServerVersion = "1.0.0"
+	toolNameSend      = "send"
+	testMessage       = "hello"
 )
 
 type fakeNotificationSender struct {
@@ -21,20 +29,29 @@ type fakeNotificationSender struct {
 func (f *fakeNotificationSender) Send(_ context.Context, notification domain.Notification) error {
 	f.called = true
 	f.notification = notification
+
 	return f.err
 }
 
-func TestNewServer_RegistersSendTool(t *testing.T) {
-	useCase := application.NewSendNotificationUseCase(&fakeNotificationSender{})
-	s := NewServer("test-server", "1.0.0", useCase)
+func setupServerWithTool(t *testing.T, sender *fakeNotificationSender) *server.ServerTool {
+	t.Helper()
 
-	tool := s.GetTool("send")
+	useCase := application.NewSendNotificationUseCase(sender)
+	s := NewServer(testServerName, testServerVersion, useCase)
+
+	tool := s.GetTool(toolNameSend)
 	if tool == nil {
 		t.Fatal("send tool was not registered")
 	}
 
-	if tool.Tool.Name != "send" {
-		t.Fatalf("tool name = %q, want %q", tool.Tool.Name, "send")
+	return tool
+}
+
+func TestNewServer_RegistersSendTool(t *testing.T) {
+	tool := setupServerWithTool(t, &fakeNotificationSender{})
+
+	if tool.Tool.Name != toolNameSend {
+		t.Fatalf("tool name = %q, want %q", tool.Tool.Name, toolNameSend)
 	}
 	if tool.Tool.Description != "Sends a notification via Pushover." {
 		t.Fatalf("tool description = %q", tool.Tool.Description)
@@ -56,20 +73,14 @@ func TestNewServer_RegistersSendTool(t *testing.T) {
 
 func TestSendToolHandler_Success(t *testing.T) {
 	fakeSender := &fakeNotificationSender{}
-	useCase := application.NewSendNotificationUseCase(fakeSender)
-	s := NewServer("test-server", "1.0.0", useCase)
-
-	tool := s.GetTool("send")
-	if tool == nil {
-		t.Fatal("send tool was not registered")
-	}
+	tool := setupServerWithTool(t, fakeSender)
 
 	priority := 1
 	request := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
-			Name: "send",
+			Name: toolNameSend,
 			Arguments: map[string]any{
-				"message":  "hello",
+				"message":  testMessage,
 				"priority": priority,
 				"url":      "https://example.com",
 			},
@@ -90,8 +101,8 @@ func TestSendToolHandler_Success(t *testing.T) {
 	if !fakeSender.called {
 		t.Fatal("sender.Send was not called")
 	}
-	if fakeSender.notification.Message != "hello" {
-		t.Fatalf("message = %q, want %q", fakeSender.notification.Message, "hello")
+	if fakeSender.notification.Message != testMessage {
+		t.Fatalf("message = %q, want %q", fakeSender.notification.Message, testMessage)
 	}
 	if fakeSender.notification.Priority == nil || *fakeSender.notification.Priority != 1 {
 		t.Fatalf("priority = %v, want 1", fakeSender.notification.Priority)
@@ -110,19 +121,13 @@ func TestSendToolHandler_Success(t *testing.T) {
 }
 
 func TestSendToolHandler_InvalidArguments(t *testing.T) {
-	useCase := application.NewSendNotificationUseCase(&fakeNotificationSender{})
-	s := NewServer("test-server", "1.0.0", useCase)
-
-	tool := s.GetTool("send")
-	if tool == nil {
-		t.Fatal("send tool was not registered")
-	}
+	tool := setupServerWithTool(t, &fakeNotificationSender{})
 
 	request := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
-			Name: "send",
+			Name: toolNameSend,
 			Arguments: map[string]any{
-				"message":  "hello",
+				"message":  testMessage,
 				"priority": "high",
 			},
 		},
@@ -150,19 +155,13 @@ func TestSendToolHandler_InvalidArguments(t *testing.T) {
 
 func TestSendToolHandler_UseCaseError(t *testing.T) {
 	fakeSender := &fakeNotificationSender{err: errors.New("pushover unavailable")}
-	useCase := application.NewSendNotificationUseCase(fakeSender)
-	s := NewServer("test-server", "1.0.0", useCase)
-
-	tool := s.GetTool("send")
-	if tool == nil {
-		t.Fatal("send tool was not registered")
-	}
+	tool := setupServerWithTool(t, fakeSender)
 
 	request := mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
-			Name: "send",
+			Name: toolNameSend,
 			Arguments: map[string]any{
-				"message": "hello",
+				"message": testMessage,
 			},
 		},
 	}
