@@ -9,6 +9,12 @@ import (
 	"github.com/adlandh/pushover-mcp/internal/domain"
 )
 
+const (
+	testMessage         = "hello"
+	errMessageRequired  = "message is required"
+	errPriorityOutRange = "priority must be between -2 and 2"
+)
+
 type fakeSender struct {
 	err          error
 	called       bool
@@ -18,17 +24,56 @@ type fakeSender struct {
 func (f *fakeSender) Send(_ context.Context, notification domain.Notification) error {
 	f.called = true
 	f.notification = notification
+
 	return f.err
 }
 
-func TestSendNotificationUseCase_Execute_Success(t *testing.T) {
+func newUseCaseWithFake() (*fakeSender, *SendNotificationUseCase) {
 	sender := &fakeSender{}
 	useCase := NewSendNotificationUseCase(sender)
+
+	return sender, useCase
+}
+
+func assertStringPtr(t *testing.T, got *string, want, field string) {
+	t.Helper()
+
+	if got == nil || *got != want {
+		t.Fatalf("%s = %v, want %q", field, got, want)
+	}
+}
+
+func assertIntPtr(t *testing.T, got *int, want int, field string) {
+	t.Helper()
+
+	if got == nil || *got != want {
+		t.Fatalf("%s = %v, want %d", field, got, want)
+	}
+}
+
+func assertValidationError(t *testing.T, sender *fakeSender, err error, want string) {
+	t.Helper()
+
+	if err == nil {
+		t.Fatal("Execute() error = nil, want non-nil")
+	}
+
+	if err.Error() != want {
+		t.Fatalf("error = %q, want %q", err.Error(), want)
+	}
+
+	if sender.called {
+		t.Fatal("sender.Send was called, want not called")
+	}
+}
+
+func TestSendNotificationUseCase_Execute_Success(t *testing.T) {
+	sender, useCase := newUseCaseWithFake()
 
 	priority := 1
 	title := "Test"
 	notification := domain.Notification{
-		Message:  "hello",
+		Message:  testMessage,
 		Title:    &title,
 		Priority: &priority,
 	}
@@ -41,20 +86,17 @@ func TestSendNotificationUseCase_Execute_Success(t *testing.T) {
 	if !sender.called {
 		t.Fatal("sender.Send was not called")
 	}
-	if sender.notification.Message != "hello" {
-		t.Fatalf("message = %q, want %q", sender.notification.Message, "hello")
+
+	if sender.notification.Message != testMessage {
+		t.Fatalf("message = %q, want %q", sender.notification.Message, testMessage)
 	}
-	if sender.notification.Title == nil || *sender.notification.Title != "Test" {
-		t.Fatalf("title = %v, want Test", sender.notification.Title)
-	}
-	if sender.notification.Priority == nil || *sender.notification.Priority != 1 {
-		t.Fatalf("priority = %v, want 1", sender.notification.Priority)
-	}
+
+	assertStringPtr(t, sender.notification.Title, "Test", "title")
+	assertIntPtr(t, sender.notification.Priority, 1, "priority")
 }
 
 func TestSendNotificationUseCase_Execute_AllOptionalFields(t *testing.T) {
-	sender := &fakeSender{}
-	useCase := NewSendNotificationUseCase(sender)
+	sender, useCase := newUseCaseWithFake()
 
 	priority := 0
 	title := "Title"
@@ -64,7 +106,7 @@ func TestSendNotificationUseCase_Execute_AllOptionalFields(t *testing.T) {
 	device := "iphone"
 
 	notification := domain.Notification{
-		Message:  "hello",
+		Message:  testMessage,
 		Title:    &title,
 		Priority: &priority,
 		Sound:    &sound,
@@ -81,31 +123,17 @@ func TestSendNotificationUseCase_Execute_AllOptionalFields(t *testing.T) {
 	if !sender.called {
 		t.Fatal("sender.Send was not called")
 	}
-	if sender.notification.Sound == nil || *sender.notification.Sound != "pushover" {
-		t.Fatalf("sound = %v, want pushover", sender.notification.Sound)
-	}
-	if sender.notification.URL == nil || *sender.notification.URL != "https://example.com" {
-		t.Fatalf("url = %v, want https://example.com", sender.notification.URL)
-	}
-	if sender.notification.Device == nil || *sender.notification.Device != "iphone" {
-		t.Fatalf("device = %v, want iphone", sender.notification.Device)
-	}
+
+	assertStringPtr(t, sender.notification.Sound, sound, "sound")
+	assertStringPtr(t, sender.notification.URL, url, "url")
+	assertStringPtr(t, sender.notification.Device, device, "device")
 }
 
 func TestSendNotificationUseCase_Execute_MessageRequired(t *testing.T) {
-	sender := &fakeSender{}
-	useCase := NewSendNotificationUseCase(sender)
+	sender, useCase := newUseCaseWithFake()
 
 	err := useCase.Execute(context.Background(), domain.Notification{Message: "   "})
-	if err == nil {
-		t.Fatal("Execute() error = nil, want non-nil")
-	}
-	if err.Error() != "message is required" {
-		t.Fatalf("error = %q, want %q", err.Error(), "message is required")
-	}
-	if sender.called {
-		t.Fatal("sender.Send was called, want not called")
-	}
+	assertValidationError(t, sender, err, errMessageRequired)
 }
 
 func TestSendNotificationUseCase_Execute_PriorityOutOfRange(t *testing.T) {
@@ -119,22 +147,13 @@ func TestSendNotificationUseCase_Execute_PriorityOutOfRange(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			sender := &fakeSender{}
-			useCase := NewSendNotificationUseCase(sender)
+			sender, useCase := newUseCaseWithFake()
 
 			err := useCase.Execute(context.Background(), domain.Notification{
-				Message:  "hello",
+				Message:  testMessage,
 				Priority: &tc.priority,
 			})
-			if err == nil {
-				t.Fatal("Execute() error = nil, want non-nil")
-			}
-			if err.Error() != "priority must be between -2 and 2" {
-				t.Fatalf("error = %q, want %q", err.Error(), "priority must be between -2 and 2")
-			}
-			if sender.called {
-				t.Fatal("sender.Send was called, want not called")
-			}
+			assertValidationError(t, sender, err, errPriorityOutRange)
 		})
 	}
 }
@@ -143,13 +162,15 @@ func TestSendNotificationUseCase_Execute_SenderError(t *testing.T) {
 	sender := &fakeSender{err: errors.New("network error")}
 	useCase := NewSendNotificationUseCase(sender)
 
-	err := useCase.Execute(context.Background(), domain.Notification{Message: "hello"})
+	err := useCase.Execute(context.Background(), domain.Notification{Message: testMessage})
 	if err == nil {
 		t.Fatal("Execute() error = nil, want non-nil")
 	}
+
 	if !strings.Contains(err.Error(), "network error") {
 		t.Fatalf("error = %q, want to contain %q", err.Error(), "network error")
 	}
+
 	if !sender.called {
 		t.Fatal("sender.Send was not called")
 	}
