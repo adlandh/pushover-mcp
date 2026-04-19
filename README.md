@@ -26,16 +26,10 @@ The service sends notifications through [Pushover](https://pushover.net/).
 go install github.com/adlandh/pushover-mcp@latest
 ```
 
-## MCP client setup
-
-Install first:
-
-```bash
-go install github.com/adlandh/pushover-mcp@latest
-```
-
 The binary will be available as `pushover-mcp` in your `GOBIN` (or `$(go env GOPATH)/bin` if `GOBIN` is not set).
 Use absolute path to that binary in client configs.
+
+## MCP client setup
 
 ### Codex
 
@@ -53,6 +47,9 @@ PUSHOVER_USER_KEY = "YOUR_USER_KEY"
 ### Claude Desktop
 
 Edit `claude_desktop_config.json`:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
 ```json
 {
@@ -125,11 +122,6 @@ MCP `tools/call` request example:
   }
 }
 ```
-
-Typical paths:
-
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 
 ## Quick local check (bash)
 
