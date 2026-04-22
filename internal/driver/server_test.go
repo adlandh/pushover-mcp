@@ -47,6 +47,61 @@ func setupServerWithTool(t *testing.T, sender *fakeNotificationSender) *server.S
 	return tool
 }
 
+func newCallToolRequest(args map[string]any) mcp.CallToolRequest {
+	return mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name:      toolNameSend,
+			Arguments: args,
+		},
+	}
+}
+
+func callToolHandler(t *testing.T, tool *server.ServerTool, request mcp.CallToolRequest) *mcp.CallToolResult {
+	t.Helper()
+
+	result, err := tool.Handler(context.Background(), request)
+	if err != nil {
+		t.Fatalf("handler error = %v", err)
+	}
+	if result == nil {
+		t.Fatal("result is nil")
+	}
+
+	return result
+}
+
+func assertResultText(t *testing.T, result *mcp.CallToolResult, want string) {
+	t.Helper()
+
+	if result.IsError {
+		t.Fatal("result IsError = true, want false")
+	}
+	if len(result.Content) == 0 {
+		t.Fatal("result content is empty")
+	}
+
+	text := mcp.GetTextFromContent(result.Content[0])
+	if text != want {
+		t.Fatalf("result text = %q, want %q", text, want)
+	}
+}
+
+func assertResultContainsText(t *testing.T, result *mcp.CallToolResult, want string) {
+	t.Helper()
+
+	if !result.IsError {
+		t.Fatal("result IsError = false, want true")
+	}
+	if len(result.Content) == 0 {
+		t.Fatal("result content is empty")
+	}
+
+	text := mcp.GetTextFromContent(result.Content[0])
+	if !strings.Contains(text, want) {
+		t.Fatalf("result text = %q, want to contain %q", text, want)
+	}
+}
+
 func TestNewServer_RegistersSendTool(t *testing.T) {
 	tool := setupServerWithTool(t, &fakeNotificationSender{})
 
@@ -76,27 +131,13 @@ func TestSendToolHandler_Success(t *testing.T) {
 	tool := setupServerWithTool(t, fakeSender)
 
 	priority := 1
-	request := mcp.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Name: toolNameSend,
-			Arguments: map[string]any{
-				"message":  testMessage,
-				"priority": priority,
-				"url":      "https://example.com",
-			},
-		},
-	}
+	request := newCallToolRequest(map[string]any{
+		"message":  testMessage,
+		"priority": priority,
+		"url":      "https://example.com",
+	})
 
-	result, err := tool.Handler(context.Background(), request)
-	if err != nil {
-		t.Fatalf("handler error = %v", err)
-	}
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if result.IsError {
-		t.Fatalf("result IsError = true, want false")
-	}
+	result := callToolHandler(t, tool, request)
 
 	if !fakeSender.called {
 		t.Fatal("sender.Send was not called")
@@ -111,77 +152,31 @@ func TestSendToolHandler_Success(t *testing.T) {
 		t.Fatalf("url = %v, want https://example.com", fakeSender.notification.URL)
 	}
 
-	if len(result.Content) == 0 {
-		t.Fatal("result content is empty")
-	}
-	text := mcp.GetTextFromContent(result.Content[0])
-	if text != "Notification sent." {
-		t.Fatalf("result text = %q, want %q", text, "Notification sent.")
-	}
+	assertResultText(t, result, "Notification sent.")
 }
 
 func TestSendToolHandler_InvalidArguments(t *testing.T) {
 	tool := setupServerWithTool(t, &fakeNotificationSender{})
 
-	request := mcp.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Name: toolNameSend,
-			Arguments: map[string]any{
-				"message":  testMessage,
-				"priority": "high",
-			},
-		},
-	}
+	request := newCallToolRequest(map[string]any{
+		"message":  testMessage,
+		"priority": "high",
+	})
 
-	result, err := tool.Handler(context.Background(), request)
-	if err != nil {
-		t.Fatalf("handler error = %v", err)
-	}
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if !result.IsError {
-		t.Fatal("result IsError = false, want true")
-	}
+	result := callToolHandler(t, tool, request)
 
-	if len(result.Content) == 0 {
-		t.Fatal("result content is empty")
-	}
-	text := mcp.GetTextFromContent(result.Content[0])
-	if !strings.Contains(text, "invalid tool arguments") {
-		t.Fatalf("result text = %q, want to contain %q", text, "invalid tool arguments")
-	}
+	assertResultContainsText(t, result, "invalid tool arguments")
 }
 
 func TestSendToolHandler_UseCaseError(t *testing.T) {
 	fakeSender := &fakeNotificationSender{err: errors.New("pushover unavailable")}
 	tool := setupServerWithTool(t, fakeSender)
 
-	request := mcp.CallToolRequest{
-		Params: mcp.CallToolParams{
-			Name: toolNameSend,
-			Arguments: map[string]any{
-				"message": testMessage,
-			},
-		},
-	}
+	request := newCallToolRequest(map[string]any{
+		"message": testMessage,
+	})
 
-	result, err := tool.Handler(context.Background(), request)
-	if err != nil {
-		t.Fatalf("handler error = %v", err)
-	}
-	if result == nil {
-		t.Fatal("result is nil")
-	}
-	if !result.IsError {
-		t.Fatal("result IsError = false, want true")
-	}
+	result := callToolHandler(t, tool, request)
 
-	if len(result.Content) == 0 {
-		t.Fatal("result content is empty")
-	}
-	text := mcp.GetTextFromContent(result.Content[0])
-	if !strings.Contains(text, "Failed to send notification") {
-		t.Fatalf("result text = %q, want to contain %q", text, "Failed to send notification")
-	}
+	assertResultContainsText(t, result, "Failed to send notification")
 }
