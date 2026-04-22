@@ -20,16 +20,16 @@ Preserve dependency direction:
 
 - `internal/domain`: core models and interfaces
 - `internal/application`: use cases and orchestration
-- `internal/adapters`: external integrations such as the Pushover HTTP client
+- `internal/driven`: external integrations such as the Pushover HTTP client
 - `internal/config`: environment parsing and config loading
-- `internal/ports`: MCP server wiring and transport-facing handlers
+- `internal/driver`: MCP server wiring and transport-facing handlers
 
 Rules:
 
 - Dependencies point inward.
-- `domain` must not depend on `application`, `adapters`, `config`, or `ports`.
-- Keep HTTP and Pushover API details in `adapters`.
-- Keep MCP-specific concerns in `ports`.
+- `domain` must not depend on `application`, `driven`, `config`, or `driver`.
+- Keep HTTP and Pushover API details in `driven`.
+- Keep MCP-specific concerns in `driver`.
 - Keep validation and orchestration in `application`.
 - Keep `main.go` thin.
 
@@ -50,7 +50,7 @@ Use the narrowest command that proves the change first.
 go test ./...
 
 # Run a single test
-go test ./internal/adapters/... -run TestNewClient_Validation -v
+go test ./internal/driven/... -run TestNewClient_Validation -v
 
 # Run tests with coverage
 go test ./... -coverprofile=coverage.out
@@ -144,9 +144,11 @@ Rules:
 
 Useful repo patterns:
 
-- Adapter tests use `httptest.Server`.
-- Application tests use `fake` senders.
-- Port tests can call MCP handlers directly.
+- `driven` tests use `httptest.Server`.
+- `application` tests use `fake` senders.
+- `driver` tests call MCP handlers directly.
+- Test helpers follow `setupXxx`, `newTestXxx`, `assertXxx` naming.
+- Extract repeated test literals into constants at package level.
 
 ## Linting Expectations
 
@@ -159,20 +161,29 @@ Write code compatible with these linters:
 - `errcheck`
 - `gosmopolitan`
 - `govet`
+- `funlen`
+- `dupl`
+- `dupword`
+- `thelper`
+- `errorlint`
+- `staticcheck`
+- `unused`
+- `ineffassign`
 
 ## File-Level Guidance
 
 - `internal/domain`: keep it dependency-free.
 - `internal/application`: express use cases in terms of domain interfaces.
-- `internal/adapters`: encapsulate Pushover HTTP behavior.
+- `internal/driven`: encapsulate Pushover HTTP behavior.
 - `internal/config`: handle env-driven configuration only.
-- `internal/ports`: translate MCP input/output without embedding business logic.
+- `internal/driver`: translate MCP input/output without embedding business logic.
 
 ## Agent Notes
 
 - No Cursor rules or Copilot instruction files are present in this repository.
 - Do not introduce new tooling or config formats unless clearly needed.
 - Keep `README.md` examples aligned with actual runtime behavior and config keys.
+- Push triggers a lefthook pre-push hook that runs `golangci-lint` and `go test ./...`. Failures block the push.
 
 ## Change Checklist
 

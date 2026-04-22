@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/adlandh/pushover-mcp/internal/adapters"
+	"github.com/adlandh/pushover-mcp/internal/driven"
 	"github.com/caarlos0/env/v11"
 )
 
 type EnvConfig struct {
-	Pushover adapters.Config
+	Pushover driven.Config
 	Timeout  time.Duration
 }
 
@@ -26,7 +26,7 @@ func FromEnv() (EnvConfig, error) {
 		return EnvConfig{}, fmt.Errorf("parse env: %w", err)
 	}
 
-	return EnvConfig{Pushover: adapters.Config{
+	return EnvConfig{Pushover: driven.Config{
 		APIToken: raw.PushoverAPIToken,
 		UserKey:  raw.PushoverUserKey,
 		APIURL:   raw.PushoverAPIURL,
