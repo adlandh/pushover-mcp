@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/adlandh/pushover-mcp/internal/adapters"
 	"github.com/adlandh/pushover-mcp/internal/application"
 	"github.com/adlandh/pushover-mcp/internal/config"
-	"github.com/adlandh/pushover-mcp/internal/ports"
+	"github.com/adlandh/pushover-mcp/internal/driven"
+	"github.com/adlandh/pushover-mcp/internal/driver"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -25,13 +25,13 @@ func run() error {
 
 	httpClient := &http.Client{Timeout: env.Timeout}
 
-	sender, err := adapters.NewPushoverClient(env.Pushover, httpClient)
+	sender, err := driven.NewPushoverClient(env.Pushover, httpClient)
 	if err != nil {
 		return fmt.Errorf("error creating sender: %w", err)
 	}
 
 	useCase := application.NewSendNotificationUseCase(sender)
-	mcpServer := ports.NewServer(serverName, serverVersion, useCase)
+	mcpServer := driver.NewServer(serverName, serverVersion, useCase)
 
 	if err := server.ServeStdio(mcpServer); err != nil {
 		return fmt.Errorf("error starting server: %w", err)
