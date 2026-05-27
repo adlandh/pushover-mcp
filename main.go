@@ -17,21 +17,29 @@ const (
 	serverVersion = "1.0.0"
 )
 
+func buildServer(env config.EnvConfig) (*server.MCPServer, error) {
+	httpClient := &http.Client{Timeout: env.Timeout}
+
+	sender, err := driven.NewPushoverClient(env.Pushover, httpClient)
+	if err != nil {
+		return nil, fmt.Errorf("error creating sender: %w", err)
+	}
+
+	useCase := application.NewSendNotificationUseCase(sender)
+
+	return driver.NewServer(serverName, serverVersion, useCase), nil
+}
+
 func run() error {
 	env, err := config.FromEnv()
 	if err != nil {
 		return fmt.Errorf("configuration error: %w", err)
 	}
 
-	httpClient := &http.Client{Timeout: env.Timeout}
-
-	sender, err := driven.NewPushoverClient(env.Pushover, httpClient)
+	mcpServer, err := buildServer(env)
 	if err != nil {
-		return fmt.Errorf("error creating sender: %w", err)
+		return err
 	}
-
-	useCase := application.NewSendNotificationUseCase(sender)
-	mcpServer := driver.NewServer(serverName, serverVersion, useCase)
 
 	if err := server.ServeStdio(mcpServer); err != nil {
 		return fmt.Errorf("error starting server: %w", err)

@@ -1,11 +1,11 @@
 package domain
 
 type Notification struct {
-	Title    *string
 	Priority *int
-	Sound    *string
-	URL      *string
-	URLTitle *string
-	Device   *string
 	Message  string
+	Title    string
+	Sound    string
+	URL      string
+	URLTitle string
+	Device   string
 }

@@ -148,11 +148,11 @@ func TestSendToolHandler_Success(t *testing.T) {
 	if fakeSender.notification.Priority == nil || *fakeSender.notification.Priority != 1 {
 		t.Fatalf("priority = %v, want 1", fakeSender.notification.Priority)
 	}
-	if fakeSender.notification.URL == nil || *fakeSender.notification.URL != "https://example.com" {
-		t.Fatalf("url = %v, want https://example.com", fakeSender.notification.URL)
+	if fakeSender.notification.URL != "https://example.com" {
+		t.Fatalf("url = %q, want https://example.com", fakeSender.notification.URL)
 	}
 
-	assertResultText(t, result, "Notification sent.")
+	assertResultText(t, result, NotificationSentMessage)
 }
 
 func TestSendToolHandler_InvalidArguments(t *testing.T) {

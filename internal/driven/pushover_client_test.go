@@ -129,20 +129,14 @@ func TestSend_SuccessAndFormPayload(t *testing.T) {
 	client := newTestClient(t, ts)
 
 	priority := 2
-	title := "Build"
-	sound := "pushover"
-	testURLValue := testURL
-	urlTitle := "Link"
-	device := "iphone"
-
 	n := domain.Notification{
 		Message:  "deployed",
-		Title:    &title,
+		Title:    "Build",
 		Priority: &priority,
-		Sound:    &sound,
-		URL:      &testURLValue,
-		URLTitle: &urlTitle,
-		Device:   &device,
+		Sound:    "pushover",
+		URL:      testURL,
+		URLTitle: "Link",
+		Device:   "iphone",
 	}
 
 	if err := client.Send(context.Background(), n); err != nil {
@@ -213,12 +207,10 @@ func TestSend_EmptyOptionalFields(t *testing.T) {
 
 	client := newTestClient(t, ts)
 
-	emptyTitle := ""
-	emptySound := "   "
 	n := domain.Notification{
 		Message: "test",
-		Title:   &emptyTitle,
-		Sound:   &emptySound,
+		Title:   "",
+		Sound:   "   ",
 	}
 
 	if err := client.Send(context.Background(), n); err != nil {
