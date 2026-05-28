@@ -11,7 +11,7 @@ import (
 
 const NotificationSentMessage = "Notification sent."
 
-type SendNotificationUseCase interface {
+type NotificationExecutor interface {
 	Execute(ctx context.Context, notification domain.Notification) error
 }
 
@@ -33,7 +33,7 @@ func deref(p *string) string {
 	return *p
 }
 
-func NewServer(name, version string, useCase SendNotificationUseCase) *server.MCPServer {
+func NewServer(name, version string, useCase NotificationExecutor) *server.MCPServer {
 	s := server.NewMCPServer(
 		name,
 		version,
