@@ -2,6 +2,7 @@ package driven
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,15 +30,15 @@ type PushoverClient struct {
 
 func NewPushoverClient(cfg Config, httpClient *http.Client) (*PushoverClient, error) {
 	if cfg.APIToken == "" {
-		return nil, fmt.Errorf("missing APIToken")
+		return nil, errors.New("missing APIToken")
 	}
 
 	if cfg.UserKey == "" {
-		return nil, fmt.Errorf("missing UserKey")
+		return nil, errors.New("missing UserKey")
 	}
 
 	if httpClient == nil {
-		return nil, fmt.Errorf("http client is required")
+		return nil, errors.New("http client is required")
 	}
 
 	apiURL := cfg.APIURL
@@ -95,17 +96,19 @@ func buildFormValues(apiToken, userKey string, notification domain.Notification)
 	return form
 }
 
-func setOptionalString(form url.Values, key string, value *string) {
-	if value == nil {
-		return
-	}
+const (
+	emergencyPriority      = 2
+	emergencyRetrySeconds  = 60
+	emergencyExpireSeconds = 3600
+)
 
-	trimmed := strings.TrimSpace(*value)
+func setOptionalString(form url.Values, key, value string) {
+	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
 		return
 	}
 
-	form.Set(key, *value)
+	form.Set(key, trimmed)
 }
 
 func setPriority(form url.Values, priority *int) {
@@ -115,9 +118,9 @@ func setPriority(form url.Values, priority *int) {
 
 	form.Set("priority", strconv.Itoa(*priority))
 
-	if *priority == 2 {
-		form.Set("retry", "60")
-		form.Set("expire", "3600")
+	if *priority == emergencyPriority {
+		form.Set("retry", strconv.Itoa(emergencyRetrySeconds))
+		form.Set("expire", strconv.Itoa(emergencyExpireSeconds))
 	}
 }
 

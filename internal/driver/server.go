@@ -6,9 +6,14 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 
-	"github.com/adlandh/pushover-mcp/internal/application"
 	"github.com/adlandh/pushover-mcp/internal/domain"
 )
+
+const NotificationSentMessage = "Notification sent."
+
+type NotificationExecutor interface {
+	Execute(ctx context.Context, notification domain.Notification) error
+}
 
 type sendArguments struct {
 	Title    *string `json:"title,omitempty"`
@@ -20,7 +25,15 @@ type sendArguments struct {
 	Message  string  `json:"message"`
 }
 
-func NewServer(name, version string, useCase *application.SendNotificationUseCase) *server.MCPServer {
+func deref(p *string) string {
+	if p == nil {
+		return ""
+	}
+
+	return *p
+}
+
+func NewServer(name, version string, useCase NotificationExecutor) *server.MCPServer {
 	s := server.NewMCPServer(
 		name,
 		version,
@@ -36,19 +49,19 @@ func NewServer(name, version string, useCase *application.SendNotificationUseCas
 
 		notification := domain.Notification{
 			Message:  args.Message,
-			Title:    args.Title,
+			Title:    deref(args.Title),
 			Priority: args.Priority,
-			Sound:    args.Sound,
-			URL:      args.URL,
-			URLTitle: args.URLTitle,
-			Device:   args.Device,
+			Sound:    deref(args.Sound),
+			URL:      deref(args.URL),
+			URLTitle: deref(args.URLTitle),
+			Device:   deref(args.Device),
 		}
 
 		if err := useCase.Execute(ctx, notification); err != nil {
 			return mcp.NewToolResultErrorf("Failed to send notification: %v", err), nil
 		}
 
-		return mcp.NewToolResultText("Notification sent."), nil
+		return mcp.NewToolResultText(NotificationSentMessage), nil
 	})
 
 	return s

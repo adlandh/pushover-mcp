@@ -10,9 +10,7 @@ import (
 )
 
 const (
-	testMessage         = "hello"
-	errMessageRequired  = "message is required"
-	errPriorityOutRange = "priority must be between -2 and 2"
+	testMessage = "hello"
 )
 
 type fakeSender struct {
@@ -35,11 +33,11 @@ func newUseCaseWithFake() (*fakeSender, *SendNotificationUseCase) {
 	return sender, useCase
 }
 
-func assertStringPtr(t *testing.T, got *string, want, field string) {
+func assertString(t *testing.T, got, want, field string) {
 	t.Helper()
 
-	if got == nil || *got != want {
-		t.Fatalf("%s = %v, want %q", field, got, want)
+	if got != want {
+		t.Fatalf("%s = %q, want %q", field, got, want)
 	}
 }
 
@@ -51,15 +49,11 @@ func assertIntPtr(t *testing.T, got *int, want int, field string) {
 	}
 }
 
-func assertValidationError(t *testing.T, sender *fakeSender, err error, want string) {
+func assertValidationError(t *testing.T, sender *fakeSender, err, want error) {
 	t.Helper()
 
-	if err == nil {
-		t.Fatal("Execute() error = nil, want non-nil")
-	}
-
-	if err.Error() != want {
-		t.Fatalf("error = %q, want %q", err.Error(), want)
+	if !errors.Is(err, want) {
+		t.Fatalf("error = %v, want %v", err, want)
 	}
 
 	if sender.called {
@@ -71,10 +65,9 @@ func TestSendNotificationUseCase_Execute_Success(t *testing.T) {
 	sender, useCase := newUseCaseWithFake()
 
 	priority := 1
-	title := "Test"
 	notification := domain.Notification{
 		Message:  testMessage,
-		Title:    &title,
+		Title:    "Test",
 		Priority: &priority,
 	}
 
@@ -91,7 +84,7 @@ func TestSendNotificationUseCase_Execute_Success(t *testing.T) {
 		t.Fatalf("message = %q, want %q", sender.notification.Message, testMessage)
 	}
 
-	assertStringPtr(t, sender.notification.Title, "Test", "title")
+	assertString(t, sender.notification.Title, "Test", "title")
 	assertIntPtr(t, sender.notification.Priority, 1, "priority")
 }
 
@@ -99,20 +92,18 @@ func TestSendNotificationUseCase_Execute_AllOptionalFields(t *testing.T) {
 	sender, useCase := newUseCaseWithFake()
 
 	priority := 0
-	title := "Title"
 	sound := "pushover"
 	url := "https://example.com"
-	urlTitle := "Link"
 	device := "iphone"
 
 	notification := domain.Notification{
 		Message:  testMessage,
-		Title:    &title,
+		Title:    "Title",
 		Priority: &priority,
-		Sound:    &sound,
-		URL:      &url,
-		URLTitle: &urlTitle,
-		Device:   &device,
+		Sound:    sound,
+		URL:      url,
+		URLTitle: "Link",
+		Device:   device,
 	}
 
 	err := useCase.Execute(context.Background(), notification)
@@ -124,16 +115,16 @@ func TestSendNotificationUseCase_Execute_AllOptionalFields(t *testing.T) {
 		t.Fatal("sender.Send was not called")
 	}
 
-	assertStringPtr(t, sender.notification.Sound, sound, "sound")
-	assertStringPtr(t, sender.notification.URL, url, "url")
-	assertStringPtr(t, sender.notification.Device, device, "device")
+	assertString(t, sender.notification.Sound, sound, "sound")
+	assertString(t, sender.notification.URL, url, "url")
+	assertString(t, sender.notification.Device, device, "device")
 }
 
 func TestSendNotificationUseCase_Execute_MessageRequired(t *testing.T) {
 	sender, useCase := newUseCaseWithFake()
 
 	err := useCase.Execute(context.Background(), domain.Notification{Message: "   "})
-	assertValidationError(t, sender, err, errMessageRequired)
+	assertValidationError(t, sender, err, ErrMessageRequired)
 }
 
 func TestSendNotificationUseCase_Execute_PriorityOutOfRange(t *testing.T) {
@@ -153,7 +144,7 @@ func TestSendNotificationUseCase_Execute_PriorityOutOfRange(t *testing.T) {
 				Message:  testMessage,
 				Priority: &tc.priority,
 			})
-			assertValidationError(t, sender, err, errPriorityOutRange)
+			assertValidationError(t, sender, err, ErrPriorityOutRange)
 		})
 	}
 }
