@@ -18,6 +18,8 @@ type NotificationExecutor interface {
 type sendArguments struct {
 	Title    *string `json:"title,omitempty"`
 	Priority *int    `json:"priority,omitempty"`
+	Retry    *int    `json:"retry,omitempty"`
+	Expire   *int    `json:"expire,omitempty"`
 	Sound    *string `json:"sound,omitempty"`
 	URL      *string `json:"url,omitempty"`
 	URLTitle *string `json:"url_title,omitempty"`
@@ -38,6 +40,7 @@ func NewServer(name, version string, useCase NotificationExecutor) *server.MCPSe
 		name,
 		version,
 		server.WithToolCapabilities(false),
+		server.WithInputSchemaValidation(),
 		server.WithRecovery(),
 	)
 
@@ -51,6 +54,8 @@ func NewServer(name, version string, useCase NotificationExecutor) *server.MCPSe
 			Message:  args.Message,
 			Title:    deref(args.Title),
 			Priority: args.Priority,
+			Retry:    args.Retry,
+			Expire:   args.Expire,
 			Sound:    deref(args.Sound),
 			URL:      deref(args.URL),
 			URLTitle: deref(args.URLTitle),
@@ -81,6 +86,15 @@ func buildSendTool() mcp.Tool {
 			mcp.Description("Priority from -2 to 2 (-2: lowest, 2: emergency)"),
 			mcp.Min(-2),
 			mcp.Max(2),
+		),
+		mcp.WithNumber("retry",
+			mcp.Description("Retry interval in seconds (required for emergency priority 2, default: 60)"),
+			mcp.Min(30),
+		),
+		mcp.WithNumber("expire",
+			mcp.Description("Expiration in seconds (required for emergency priority 2, default: 3600)"),
+			mcp.Min(30),
+			mcp.Max(10800),
 		),
 		mcp.WithString("sound",
 			mcp.Description("Notification sound"),

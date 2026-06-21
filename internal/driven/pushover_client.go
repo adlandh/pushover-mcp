@@ -87,7 +87,7 @@ func buildFormValues(apiToken, userKey string, notification domain.Notification)
 	form.Set("user", userKey)
 	form.Set("message", notification.Message)
 	setOptionalString(form, "title", notification.Title)
-	setPriority(form, notification.Priority)
+	setPriority(form, notification)
 	setOptionalString(form, "sound", notification.Sound)
 	setOptionalString(form, "url", notification.URL)
 	setOptionalString(form, "url_title", notification.URLTitle)
@@ -111,21 +111,34 @@ func setOptionalString(form url.Values, key, value string) {
 	form.Set(key, trimmed)
 }
 
-func setPriority(form url.Values, priority *int) {
-	if priority == nil {
+func setPriority(form url.Values, notification domain.Notification) {
+	if notification.Priority == nil {
 		return
 	}
 
-	form.Set("priority", strconv.Itoa(*priority))
+	form.Set("priority", strconv.Itoa(*notification.Priority))
 
-	if *priority == emergencyPriority {
-		form.Set("retry", strconv.Itoa(emergencyRetrySeconds))
-		form.Set("expire", strconv.Itoa(emergencyExpireSeconds))
+	if *notification.Priority == emergencyPriority {
+		retry := emergencyRetrySeconds
+		if notification.Retry != nil {
+			retry = *notification.Retry
+		}
+
+		expire := emergencyExpireSeconds
+		if notification.Expire != nil {
+			expire = *notification.Expire
+		}
+
+		form.Set("retry", strconv.Itoa(retry))
+		form.Set("expire", strconv.Itoa(expire))
 	}
 }
 
 func validateResponse(resp *http.Response) error {
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if err != nil {
+		return fmt.Errorf("read response body: %w", err)
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("pushover returned %s: %s", resp.Status, strings.TrimSpace(string(body)))
