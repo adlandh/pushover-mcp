@@ -129,10 +129,14 @@ func TestSend_SuccessAndFormPayload(t *testing.T) {
 	client := newTestClient(t, ts)
 
 	priority := 2
+	retry := 30
+	expire := 90
 	n := domain.Notification{
 		Message:  "deployed",
 		Title:    "Build",
 		Priority: &priority,
+		Retry:    &retry,
+		Expire:   &expire,
 		Sound:    "pushover",
 		URL:      testURL,
 		URLTitle: "Link",
@@ -149,12 +153,37 @@ func TestSend_SuccessAndFormPayload(t *testing.T) {
 		"message":   "deployed",
 		"title":     "Build",
 		"priority":  "2",
-		"retry":     "60",
-		"expire":    "3600",
+		"retry":     "30",
+		"expire":    "90",
 		"sound":     "pushover",
 		"url":       testURL,
 		"url_title": "Link",
 		"device":    "iphone",
+	})
+}
+
+func TestSend_EmergencyPriority_DefaultRetryExpire(t *testing.T) {
+	var received url.Values
+
+	ts := setupTestServer(t, &received)
+	defer ts.Close()
+
+	client := newTestClient(t, ts)
+
+	priority := 2
+	n := domain.Notification{
+		Message:  "deployed",
+		Priority: &priority,
+	}
+
+	if err := client.Send(context.Background(), n); err != nil {
+		t.Fatalf(errSend, err)
+	}
+
+	assertFormValues(t, received, map[string]string{
+		"priority": "2",
+		"retry":    "60",
+		"expire":   "3600",
 	})
 }
 

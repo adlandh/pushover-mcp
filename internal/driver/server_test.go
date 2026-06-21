@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -65,6 +66,36 @@ func callToolHandler(t *testing.T, tool *server.ServerTool, request mcp.CallTool
 	}
 	if result == nil {
 		t.Fatal("result is nil")
+	}
+
+	return result
+}
+
+func callServerTool(t *testing.T, s *server.MCPServer, args map[string]any) *mcp.CallToolResult {
+	t.Helper()
+
+	request, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "tools/call",
+		"params": map[string]any{
+			"name":      toolNameSend,
+			"arguments": args,
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal request: %v", err)
+	}
+
+	response := s.HandleMessage(t.Context(), request)
+	rpcResponse, ok := response.(mcp.JSONRPCResponse)
+	if !ok {
+		t.Fatalf("response = %T, want JSONRPCResponse", response)
+	}
+
+	result, ok := rpcResponse.Result.(*mcp.CallToolResult)
+	if !ok {
+		t.Fatalf("result = %T, want CallToolResult", rpcResponse.Result)
 	}
 
 	return result
@@ -166,6 +197,37 @@ func TestSendToolHandler_InvalidArguments(t *testing.T) {
 	result := callToolHandler(t, tool, request)
 
 	assertResultContainsText(t, result, "invalid tool arguments")
+}
+
+func TestNewServer_RejectsInvalidRetryAndExpire(t *testing.T) {
+	tests := []struct {
+		name      string
+		arguments map[string]any
+		want      string
+	}{
+		{
+			name:      "retry below minimum",
+			arguments: map[string]any{"message": testMessage, "retry": 29},
+			want:      "retry",
+		},
+		{
+			name:      "expire above maximum",
+			arguments: map[string]any{"message": testMessage, "expire": 10801},
+			want:      "expire",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			sender := &fakeNotificationSender{}
+			result := callServerTool(t, NewServer(testServerName, testServerVersion, application.NewSendNotificationUseCase(sender)), tc.arguments)
+
+			assertResultContainsText(t, result, tc.want)
+			if sender.called {
+				t.Fatal("sender.Send was called")
+			}
+		})
+	}
 }
 
 func TestSendToolHandler_UseCaseError(t *testing.T) {
