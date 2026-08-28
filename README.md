@@ -1,15 +1,15 @@
-# Pushover MCP
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%" alt="Pushover MCP — an MCP server with one tool, send, that delivers Pushover push notifications to your phone">
+</p>
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/adlandh/pushover-mcp.svg)](https://pkg.go.dev/github.com/adlandh/pushover-mcp)
-[![Go Report Card](https://goreportcard.com/badge/github.com/adlandh/pushover-mcp)](https://goreportcard.com/report/github.com/adlandh/pushover-mcp)
+[![Test](https://github.com/adlandh/pushover-mcp/actions/workflows/test.yml/badge.svg)](https://github.com/adlandh/pushover-mcp/actions/workflows/test.yml)
 
-MCP service with one tool: `send`.
-
-The service sends notifications through [Pushover](https://pushover.net/).
+A Model Context Protocol server with one tool — `send` — that sends notifications through [Pushover](https://pushover.net/).
 
 ## Requirements
 
-- Go 1.26+
+- Go 1.27+
 - Pushover app token
 - Pushover user key
 

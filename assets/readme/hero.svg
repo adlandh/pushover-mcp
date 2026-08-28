@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="370" viewBox="0 0 1200 370" role="img" aria-labelledby="hero-title hero-desc">
+  <title id="hero-title">Pushover MCP</title>
+  <desc id="hero-desc">Pushover MCP: an MCP server with one tool, send, that delivers Pushover push notifications to your phone. A tool call becomes a notification card on the right.</desc>
+
+  <defs></defs>
+
+  <rect width="1200" height="370" rx="24" fill="#0D1117"/>
+
+  <!-- title block -->
+  <g id="title-block">
+    <text x="64" y="110" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#8B949E" letter-spacing="3">MCP SERVER · STDIO</text>
+    <text x="64" y="170" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="60" font-weight="800" fill="#E6EDF3">Pushover MCP</text>
+    <text x="64" y="214" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" fill="#9DA7B3">One tool — <tspan font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#79C0FF">send</tspan>. Push notifications</text>
+    <text x="64" y="242" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="22" fill="#9DA7B3">to your phone from any MCP client.</text>
+  </g>
+
+  <!-- client chips -->
+  <g id="client-chips" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#C9D1D9">
+    <rect x="64" y="280" width="100" height="42" rx="10" fill="#161B22" stroke="#30363D"/>
+    <text x="84" y="307">Codex</text>
+    <rect x="176" y="280" width="208" height="42" rx="10" fill="#161B22" stroke="#30363D"/>
+    <text x="196" y="307">Claude Desktop</text>
+    <rect x="396" y="280" width="136" height="42" rx="10" fill="#161B22" stroke="#30363D"/>
+    <text x="416" y="307">OpenCode</text>
+  </g>
+
+  <!-- tool call input -->
+  <g id="tool-call">
+    <rect x="660" y="56" width="264" height="42" rx="10" fill="#161B22" stroke="#30363D"/>
+    <text x="676" y="83" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20" fill="#79C0FF">tools/call "send"</text>
+    <line x1="792" y1="102" x2="792" y2="118" stroke="#30363D" stroke-width="2"/>
+    <polygon points="786,116 798,116 792,124" fill="#4CA8E8"/>
+  </g>
+
+  <!-- notification card -->
+  <g id="notification-card">
+    <rect x="660" y="128" width="460" height="124" rx="20" fill="#161B22" stroke="#30363D"/>
+    <circle cx="702" cy="178" r="23" fill="#4CA8E8"/>
+    <path d="M702 163 c-5.5 0-10 4.5-10 10 v5.5 c0 2.8-1.6 4.6-3.6 6.5 h27.2 c-2-1.9-3.6-3.7-3.6-6.5 v-5.5 c0-5.5-4.5-10-10-10 z" fill="#FFFFFF"/>
+    <circle cx="702" cy="188" r="2.6" fill="#FFFFFF"/>
+    <text x="738" y="170" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="600" fill="#E6EDF3">Pushover</text>
+    <text x="1096" y="170" text-anchor="end" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="16" fill="#8B949E">now</text>
+    <text x="738" y="196" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="20" font-weight="700" fill="#E6EDF3">CI</text>
+    <text x="738" y="222" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="20" fill="#C9D1D9">Deploy finished</text>
+  </g>
+
+  <!-- status -->
+  <g id="status">
+    <path d="M660 278 l7 7 12-14" fill="none" stroke="#3FB950" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="692" y="286" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#3FB950">notification delivered</text>
+  </g>
+</svg>
