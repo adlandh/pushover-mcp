@@ -3,7 +3,7 @@ module github.com/adlandh/pushover-mcp
 go 1.27
 
 require (
-	github.com/caarlos0/env/v11 v11.4.1
+	github.com/caarlos0/env/v11 v11.4.2
 	github.com/mark3labs/mcp-go v1.5.0
 )
 
